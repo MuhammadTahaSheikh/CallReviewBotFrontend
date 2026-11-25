@@ -1,0 +1,14 @@
+{
+  "externalMeetingId": "fathom_sim_abc123",
+  "source": "fathom",
+  "title": "Hygiene appointment booking",
+  "transcript": "Rep: Hi, thanks for calling Northstar. How can I help today?\nCaller: I'd like to book a cleaning next Tuesday morning.\nRep: Sure — I have Tuesday at 10:00 AM available. Does that work?\nCaller: Yes, perfect.\nRep: Great, you're booked for Tuesday at 10. I'll send a confirmation and reminder.\nCaller: Thank you!",
+  "callType": "booking",
+  "occurredAt": "2026-03-19T16:40:00.000Z",
+  "businessId": "biz_demo_seed",
+  "representativeName": "Casey Ng",
+  "metadata": {
+    "channel": "phone",
+    "durationSec": 312
+  }
+}

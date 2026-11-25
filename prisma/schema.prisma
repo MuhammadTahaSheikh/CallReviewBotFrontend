@@ -1,0 +1,306 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// App account linked to Supabase Auth (roles: user | admin)
+model AppUser {
+  id             String   @id @default(cuid())
+  supabaseUserId String   @unique
+  email          String   @unique
+  fullName       String?
+  role           String   @default("user") // user | admin
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  calls            Call[]
+  practiceSessions PracticeSession[]
+
+  @@index([role])
+}
+
+model Business {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  representatives Representative[]
+  calls           Call[]
+}
+
+model Representative {
+  id         String   @id @default(cuid())
+  name       String
+  businessId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  calls    Call[]
+
+  @@index([businessId])
+}
+
+model ScoringProfile {
+  id          String   @id @default(cuid())
+  callType    String   @unique
+  label       String
+  description String?
+  categories  String // JSON: [{ key, label, weight }]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  calls Call[]
+}
+
+model Call {
+  id                 String    @id @default(cuid())
+  title              String
+  callType           String
+  status             String    @default("pending") // pending | processing | completed | exception | failed | quarantined
+  riskLevel          String    @default("low") // low | medium | high
+  source             String    @default("manual") // manual | webhook
+  externalMeetingId  String?
+  occurredAt         DateTime  @default(now())
+  processedAt        DateTime?
+  businessId         String?
+  representativeId   String?
+  representativeName String?
+  scoringProfileId   String?
+  ownerUserId        String?
+  overallScore       Float?
+  metadata           String? // JSON
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  business         Business?         @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  representative   Representative?   @relation(fields: [representativeId], references: [id], onDelete: SetNull)
+  scoringProfile   ScoringProfile?   @relation(fields: [scoringProfileId], references: [id], onDelete: SetNull)
+  owner            AppUser?          @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  transcript       Transcript?
+  analysis         CallAnalysis?
+  actionTasks      ActionTask[]
+  exceptionReviews ExceptionReview[]
+  automations      AutomationExecution[]
+  auditLogs        AuditLog[]
+
+  @@unique([source, externalMeetingId])
+  @@index([callType])
+  @@index([status])
+  @@index([riskLevel])
+  @@index([occurredAt])
+  @@index([businessId])
+  @@index([ownerUserId])
+}
+
+model Transcript {
+  id        String   @id @default(cuid())
+  callId    String   @unique
+  content   String
+  charCount Int
+  createdAt DateTime @default(now())
+
+  call Call @relation(fields: [callId], references: [id], onDelete: Cascade)
+}
+
+model CallAnalysis {
+  id                 String   @id @default(cuid())
+  callId             String   @unique
+  summary            String
+  purpose            String?
+  strengths          String // JSON array
+  weaknesses         String // JSON array
+  recommendations    String // JSON array
+  followUpOpportunities String // JSON array
+  risks              String // JSON array
+  missingInformation String // JSON array
+  proposedActions    String // JSON array
+  rawModelOutput     String? // JSON
+  demoMode           Boolean  @default(true)
+  model              String?
+  latencyMs          Int?
+  inputTokens        Int?
+  outputTokens       Int?
+  errorMessage       String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  call            Call            @relation(fields: [callId], references: [id], onDelete: Cascade)
+  categoryScores  CategoryScore[]
+  recommendationRows Recommendation[]
+}
+
+model CategoryScore {
+  id             String  @id @default(cuid())
+  analysisId     String
+  key            String
+  label          String
+  weight         Int
+  score          Float? // null = N/A
+  justification  String?
+  evidenceQuote  String?
+  evidenceVerified Boolean @default(false)
+
+  analysis CallAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
+}
+
+model Recommendation {
+  id         String @id @default(cuid())
+  analysisId String
+  text       String
+  kind       String @default("coaching") // coaching | follow_up | risk | missing_info
+
+  analysis CallAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
+}
+
+model ActionTask {
+  id          String   @id @default(cuid())
+  callId      String
+  type        String // crm_follow_up | coaching | customer_draft
+  title       String
+  description String?
+  status      String   @default("pending") // pending | approved | rejected | completed | failed | blocked
+  reason      String?
+  idempotencyKey String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  call Call @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+  @@unique([callId, type, idempotencyKey])
+  @@index([callId])
+  @@index([status])
+}
+
+model ExceptionReview {
+  id        String   @id @default(cuid())
+  callId    String
+  reason    String
+  status    String   @default("pending_review") // pending_review | in_review | approved | rejected | resolved
+  notes     String?
+  reviewer  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  resolvedAt DateTime?
+
+  call Call @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+  @@index([callId])
+  @@index([status])
+}
+
+model AutomationExecution {
+  id        String   @id @default(cuid())
+  callId    String
+  action    String
+  label     String
+  status    String // succeeded | failed | queued | blocked
+  reason    String?
+  detail    String?
+  createdAt DateTime @default(now())
+
+  call Call @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+  @@index([callId])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  callId    String?
+  actor     String   @default("system")
+  event     String
+  detail    String?
+  createdAt DateTime @default(now())
+
+  call Call? @relation(fields: [callId], references: [id], onDelete: SetNull)
+
+  @@index([callId])
+  @@index([createdAt])
+}
+
+model AppSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String // JSON
+  updatedAt DateTime @updatedAt
+}
+
+/// Practice Studio — separate from operational Call records
+model PracticeSession {
+  id                   String    @id @default(cuid())
+  scenarioId           String
+  scenarioName         String
+  callType             String
+  difficulty           String // beginner | intermediate | advanced
+  representativeName   String?
+  participantName      String
+  ownerUserId          String?
+  status               String    @default("not_started")
+  // not_started | in_progress | completed | abandoned | evaluation_pending | evaluated | evaluation_failed
+  evaluationStatus     String    @default("not_started")
+  conversationState    String? // JSON
+  startedAt            DateTime?
+  endedAt              DateTime?
+  durationSec          Int?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  owner       AppUser?            @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  messages    PracticeMessage[]
+  evaluation  PracticeEvaluation?
+
+  @@index([callType])
+  @@index([difficulty])
+  @@index([status])
+  @@index([createdAt])
+  @@index([scenarioId])
+  @@index([ownerUserId])
+}
+
+model PracticeMessage {
+  id        String   @id @default(cuid())
+  sessionId String
+  role      String // representative | participant | system
+  content   String
+  inputMethod String @default("text") // text | voice
+  sequence  Int
+  createdAt DateTime @default(now())
+
+  session PracticeSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, sequence])
+  @@index([sessionId])
+}
+
+model PracticeEvaluation {
+  id                    String   @id @default(cuid())
+  sessionId             String   @unique
+  overallScore          Float?
+  categoryScores        String // JSON
+  strengths             String // JSON
+  weaknesses            String // JSON
+  recommendations       String // JSON
+  suggestedResponses    String // JSON
+  missedOpportunities   String // JSON
+  objectiveAssessment   String // JSON
+  coachingRecommendations String // JSON
+  trainingWarnings      String? // JSON — practice-only, never ops exception queue
+  evaluationMode        String // demo | live
+  demoMode              Boolean  @default(true)
+  model                 String?
+  errorMessage          String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  session PracticeSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}

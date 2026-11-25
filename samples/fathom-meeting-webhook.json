@@ -1,0 +1,50 @@
+{
+  "title": "Discovery call with Acme",
+  "meeting_title": "Acme <> Northstar",
+  "recording_id": 987654321,
+  "url": "https://fathom.video/calls/example",
+  "share_url": "https://fathom.video/share/example",
+  "created_at": "2026-03-19T16:40:00.000Z",
+  "recording_start_time": "2026-03-19T16:00:00.000Z",
+  "recording_end_time": "2026-03-19T16:32:00.000Z",
+  "recorded_by": {
+    "name": "Casey Ng",
+    "email": "casey@example.com",
+    "email_domain": "example.com",
+    "team": "Sales"
+  },
+  "calendar_invitees": [
+    {
+      "name": "Alex Rivera",
+      "email": "alex@acme.example",
+      "email_domain": "acme.example",
+      "is_external": true
+    }
+  ],
+  "transcript": [
+    {
+      "speaker": { "display_name": "Alex Rivera" },
+      "text": "Hi — thanks for making time. We need help with follow-ups.",
+      "timestamp": "00:00:12"
+    },
+    {
+      "speaker": { "display_name": "Casey Ng" },
+      "text": "Happy to help. What does follow-up look like for your team today?",
+      "timestamp": "00:00:21"
+    },
+    {
+      "speaker": { "display_name": "Alex Rivera" },
+      "text": "Mostly spreadsheets. Leads slip if someone is out. Pricing is a concern versus a cheaper tool.",
+      "timestamp": "00:00:40"
+    },
+    {
+      "speaker": { "display_name": "Casey Ng" },
+      "text": "Understood. We can focus on automation coverage and a clear next-step demo.",
+      "timestamp": "00:01:05"
+    }
+  ],
+  "default_summary": {
+    "template_name": "general",
+    "markdown_formatted": "Discussion about CRM follow-up automation and pricing."
+  }
+}
